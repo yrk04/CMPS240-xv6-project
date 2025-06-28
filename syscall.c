@@ -7,6 +7,10 @@
 #include "x86.h"
 #include "syscall.h"
 
+#define NSYSCALLS 24
+
+int syscall_counter[NSYSCALLS];
+
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
 // Arguments on the stack, from the user call to the C
@@ -103,6 +107,8 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+extern int sys_syscallcount(void);
+extern int sys_resetcallcount(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -126,6 +132,8 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_syscallcount] sys_syscallcount,
+[SYS_resetcallcount] sys_resetcallcount,
 };
 
 void
@@ -136,10 +144,21 @@ syscall(void)
 
   num = curproc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    if (num < NSYSCALLS) {
+      syscall_counter[num]++;}
+      
     curproc->tf->eax = syscalls[num]();
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             curproc->pid, curproc->name, num);
     curproc->tf->eax = -1;
   }
+}
+
+int sys_syscallcount(void) {
+   int id;
+    if (argint(0,&id) < 0 || id < 0 || id >= NSYSCALLS) {
+     return -1;
+    }
+   return syscall_counter[id];
 }

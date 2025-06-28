@@ -89,3 +89,12 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+extern int syscall_counter[];
+
+int sys_resetcallcount(void) {
+  for (int i = 0; i < NSYSCALLS; i++) {
+    syscall_counter[i] = 0;
+  }
+  return 0;
+}
+
