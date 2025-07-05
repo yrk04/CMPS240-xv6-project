@@ -7,7 +7,7 @@
 #include "x86.h"
 #include "syscall.h"
 
-#define NSYSCALLS 24
+#define NSYSCALLS 25
 
 int syscall_counter[NSYSCALLS];
 
@@ -109,6 +109,7 @@ extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_syscallcount(void);
 extern int sys_resetcallcount(void);
+extern int sys_shutdown(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -134,6 +135,7 @@ static int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_syscallcount] sys_syscallcount,
 [SYS_resetcallcount] sys_resetcallcount,
+[SYS_shutdown] sys_shutdown,
 };
 
 void
