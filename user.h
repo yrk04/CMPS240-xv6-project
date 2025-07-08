@@ -24,6 +24,8 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int syscallcount(int id);
+int resetcallcount(void);
+int shutdown(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

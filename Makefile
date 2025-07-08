@@ -183,8 +183,8 @@ UPROGS=\
 	_zombie\
 	_callcount\
 	_resetcalls\
+	_shutdown\
 	_touch\
-	
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

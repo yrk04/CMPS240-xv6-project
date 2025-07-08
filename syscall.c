@@ -6,8 +6,7 @@
 #include "proc.h"
 #include "x86.h"
 #include "syscall.h"
-
-#define NSYSCALLS 23
+#define NSYSCALLS 25
 int syscall_counter[NSYSCALLS];
 
 // User code makes a system call with INT T_SYSCALL.
@@ -107,6 +106,8 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_syscallcount(void);
+extern int sys_resetcallcount(void);
+extern int sys_shutdown(void);
 
 
 static int (*syscalls[])(void) = {
@@ -132,6 +133,8 @@ static int (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_syscallcount] sys_syscallcount,
+[SYS_resetcallcount] sys_resetcallcount,
+[SYS_shutdown] sys_shutdown,
 };
 
 void
