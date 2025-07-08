@@ -32,4 +32,3 @@ SYSCALL(uptime)
 SYSCALL(syscallcount)
 SYSCALL(resetcallcount)
 SYSCALL(shutdown)
-
