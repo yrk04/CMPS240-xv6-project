@@ -111,7 +111,10 @@ extern int sys_shutdown(void);
 extern int sys_resetcallcount(void);
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 

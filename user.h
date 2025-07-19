@@ -28,6 +28,10 @@ int resetcallcount(void);
 int shutdown(void);
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+int getextents(const char *);
+>>>>>>> Stashed changes
 =======
 int getextents(const char *);
 >>>>>>> Stashed changes

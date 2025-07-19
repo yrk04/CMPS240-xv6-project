@@ -187,6 +187,7 @@ UPROGS=\
 	_touch\
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+	_extenttest\
 =======
 	_extenttest\
 >>>>>>> Stashed changes
