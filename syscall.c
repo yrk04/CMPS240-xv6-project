@@ -110,7 +110,10 @@ extern int sys_resetcallcount(void);
 extern int sys_shutdown(void);
 extern int sys_resetcallcount(void);
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,

@@ -186,6 +186,10 @@ UPROGS=\
 	_shutdown\
 	_touch\
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+	_extenttest\
+>>>>>>> Stashed changes
 =======
 	_extenttest\
 >>>>>>> Stashed changes
