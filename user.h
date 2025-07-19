@@ -26,6 +26,10 @@ int uptime(void);
 int syscallcount(int id);
 int resetcallcount(void);
 int shutdown(void);
+<<<<<<< Updated upstream
+=======
+int getextents(const char *);
+>>>>>>> Stashed changes
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -185,6 +185,10 @@ UPROGS=\
 	_resetcalls\
 	_shutdown\
 	_touch\
+<<<<<<< Updated upstream
+=======
+	_extenttest\
+>>>>>>> Stashed changes
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

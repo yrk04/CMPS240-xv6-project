@@ -23,3 +23,4 @@
 #define SYS_syscallcount 22
 #define SYS_resetcallcount 23
 #define SYS_shutdown 24
+#define SYS_getextents 25

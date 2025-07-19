@@ -108,6 +108,8 @@ extern int sys_uptime(void);
 extern int sys_syscallcount(void);
 extern int sys_resetcallcount(void);
 extern int sys_shutdown(void);
+extern int sys_resetcallcount(void);
+
 
 
 static int (*syscalls[])(void) = {
@@ -135,6 +137,7 @@ static int (*syscalls[])(void) = {
 [SYS_syscallcount] sys_syscallcount,
 [SYS_resetcallcount] sys_resetcallcount,
 [SYS_shutdown] sys_shutdown,
+[SYS_getextents] sys_getextents,
 };
 
 void

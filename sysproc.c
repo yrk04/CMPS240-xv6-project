@@ -6,6 +6,9 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "fs.h"
+#include "stat.h"
+#include "file.h"
 
 int
 sys_fork(void)
@@ -101,6 +104,38 @@ int sys_resetcallcount(void) {
 int sys_shutdown(void){
   outw(0xB004, 0x0|0x2000);
   outw(0x604, 0x0|0x2000);
+  return 0;
+}
+
+int sys_getextents(void) {
+  char *path;
+  if (argstr(0, &path) < 0)
+    return -1;
+
+  struct inode *ip;
+  begin_op();
+  ip = namei(path); 
+  if(ip == 0){
+    end_op();
+    return -1;
+  }
+
+  ilock(ip);
+  if(ip->type != T_EXTENT){
+    cprintf("Not an extent file\n");
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  for(int i = 0; i < MAX_EXTENTS; i++){
+    if(ip->extents[i].length == 0)
+      break;
+    cprintf("Extent %d: start=%d, len=%d\n", i, ip->extents[i].start, ip->extents[i].length);
+  }
+
+  iunlockput(ip);
+  end_op();
   return 0;
 }
 

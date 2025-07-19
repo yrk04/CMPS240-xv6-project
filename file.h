@@ -1,3 +1,5 @@
+#include "fs.h"
+#include "sleeplock.h"
 struct file {
   enum { FD_NONE, FD_PIPE, FD_INODE } type;
   int ref; // reference count
@@ -23,6 +25,7 @@ struct inode {
   short nlink;
   uint size;
   uint addrs[NDIRECT+1];
+  struct extent extents[MAX_EXTENTS];
 };
 
 // table mapping major device number to

@@ -204,6 +204,14 @@ ialloc(uint dev, short type)
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
       dip->type = type;
+      
+      if(type == T_EXTENT){
+        for(int i = 0; i < MAX_EXTENTS; i++){
+          dip->extents[i].start = 0;
+          dip->extents[i].length = 0; 
+          //initialize the extents.
+        }
+      }
       log_write(bp);   // mark it allocated on the disk
       brelse(bp);
       return iget(dev, inum);
@@ -230,7 +238,13 @@ iupdate(struct inode *ip)
   dip->minor = ip->minor;
   dip->nlink = ip->nlink;
   dip->size = ip->size;
+  
+  if(ip->type == T_EXTENT){
+    memmove(dip->extents, ip->extents, sizeof(ip->extents)); //copy the changes made to the inode in memory to the disk inode.
+  } else {
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+  }
+  
   log_write(bp);
   brelse(bp);
 }
@@ -303,7 +317,17 @@ ilock(struct inode *ip)
     ip->minor = dip->minor;
     ip->nlink = dip->nlink;
     ip->size = dip->size;
+    
+    if(ip->type == T_EXTENT){
+      for(int i = 0 ; i < MAX_EXTENTS; i++){
+        ip->extents[i].start = dip->extents[i].start;
+        ip->extents[i].length = dip->extents[i].length;
+        //load in the values of the disk inode to the mem inode.
+      }
+    }
+    else {
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
+    }
     brelse(bp);
     ip->valid = 1;
     if(ip->type == 0)
@@ -410,6 +434,23 @@ itrunc(struct inode *ip)
   int i, j;
   struct buf *bp;
   uint *a;
+  
+  if(ip->type == T_EXTENT){
+    for(i = 0 ; i < MAX_EXTENTS; i++){
+      uint start = ip->extents[i].start;
+      uint length = ip->extents[i].length;
+      
+      for(j = 0 ; j < length; j++){
+        bfree(ip->dev, start + j); //free every block for extent i.
+      }
+      ip->extents[i].start = 0;
+      ip->extents[i].length = 0;
+      //clear the extents in the inode
+    }
+    ip->size = 0;
+    iupdate(ip);
+    return;
+  }
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -452,8 +493,51 @@ stati(struct inode *ip, struct stat *st)
 int
 readi(struct inode *ip, char *dst, uint off, uint n)
 {
-  uint tot, m;
+  uint tot, m; //tot is how many bytes we've read
   struct buf *bp;
+if(ip->type == T_EXTENT){
+  tot = 0;
+//safety checks: see if we are reading within bounds.
+  if (off > ip->size || off + n < off){
+    return -1;
+  }
+  if(off + n > ip->size){
+    n = ip->size - off; 
+  }
+  
+  while(tot < n){
+    uint file_blockno = off/BSIZE; //number of the block we are looking for
+    int found = 0; //flag for if we've found the block
+    for(int i = 0; i < MAX_EXTENTS; i++){
+      uint start = ip->extents[i].start;
+      uint length = ip->extents[i].length;
+      
+      if(file_blockno < length){
+         uint disk_blockno = start + file_blockno; //get the actual physical block number on the disk
+         bp = bread(ip->dev, disk_blockno); //load that data into the buffer
+         
+         m = min(n-tot, BSIZE - off%BSIZE); //m is the number of bytes left to read. set it to either how many we have left to read, or however much we can keep going within the block.
+         memmove(dst, bp->data + off%BSIZE, m);  //copy m bytes of memory from start of block + off%bsize to dst.
+         brelse(bp); //release buffer
+         tot += m;
+         off += m;
+         dst += m;
+         //now that we have read and written m bytes, we move our reading offset forward m bytes, and destination m bytes.
+         found = 1;
+         break;
+         
+      } else {
+        file_blockno -= length; //go to the next extent.
+      }
+    }
+    
+      if(!found){
+      break; 
+      }
+    }
+  
+  return tot; //return how many bytes have been read.
+}
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
@@ -494,6 +578,50 @@ writei(struct inode *ip, char *src, uint off, uint n)
     return -1;
   if(off + n > MAXFILE*BSIZE)
     return -1;
+    
+    if(ip->type == T_EXTENT){
+    tot = 0;
+    
+      while(tot < n){
+        uint file_blockno = off/BSIZE; //block number in the file.
+        int found = 0;
+        
+        for(int i = 0; i < MAX_EXTENTS; i++){
+          uint start = ip->extents[i].start;
+          uint length = ip->extents[i].length;
+          
+          if(file_blockno < length){
+            uint disk_blockno = start + file_blockno;
+            bp = bread(ip->dev, disk_blockno);
+            
+            m = min(n - tot, BSIZE - off%BSIZE);
+            memmove(bp->data + off%BSIZE, src, m); //copy m bytes of memory from src to data + off%BSIZE
+            log_write(bp); //log the write as having occurred
+            brelse(bp);
+            
+            off += m;
+            tot += m;
+            src += m;
+            found = 1;
+            break;
+          } else {
+            file_blockno -= length;
+          }
+          
+        }
+        
+        
+        if(!found){
+          break;
+        }
+      }
+	  if(off > ip->size){
+	    ip->size = off;
+	  }
+	  iupdate(ip); //update the file size if the current offset is greater than the past size.
+	  
+	  return tot;
+    }
 
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
     bp = bread(ip->dev, bmap(ip, off/BSIZE));

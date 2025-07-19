@@ -32,3 +32,7 @@ SYSCALL(uptime)
 SYSCALL(syscallcount)
 SYSCALL(resetcallcount)
 SYSCALL(shutdown)
+<<<<<<< Updated upstream
+=======
+SYSCALL(getextents)
+>>>>>>> Stashed changes

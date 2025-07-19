@@ -1,7 +1,8 @@
 // On-disk file system format.
 // Both the kernel and user programs use this header file.
 
-
+#ifndef FS_H
+#define FS_H
 #define ROOTINO 1  // root i-number
 #define BSIZE 512  // block size
 
@@ -24,6 +25,12 @@ struct superblock {
 #define NDIRECT 12
 #define NINDIRECT (BSIZE / sizeof(uint))
 #define MAXFILE (NDIRECT + NINDIRECT)
+#define MAX_EXTENTS 6 
+
+struct extent {
+  uint start;
+  uint length;
+};
 
 // On-disk inode structure
 struct dinode {
@@ -32,7 +39,9 @@ struct dinode {
   short minor;          // Minor device number (T_DEV only)
   short nlink;          // Number of links to inode in file system
   uint size;            // Size of file (bytes)
-  uint addrs[NDIRECT+1];   // Data block addresses
+  uint addrs[NDIRECT+1]; //for non extent files
+  struct extent extents[MAX_EXTENTS];   // Extents of the file
+  char padding[16]; //prevents an error at compile time where blocks arent divisible into dinodes
 };
 
 // Inodes per block.
@@ -54,4 +63,6 @@ struct dirent {
   ushort inum;
   char name[DIRSIZ];
 };
+
+#endif //FS_H
 
