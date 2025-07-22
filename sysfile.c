@@ -296,7 +296,8 @@ sys_open(void)
   begin_op();
 
   if(omode & O_CREATE){
-    ip = create(path, T_FILE, 0, 0);
+    short type = (omode & O_EXTENT) ? T_EXTENT : T_FILE;
+    ip = create(path, type, 0, 0);
     if(ip == 0){
       end_op();
       return -1;

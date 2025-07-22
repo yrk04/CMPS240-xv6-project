@@ -186,7 +186,10 @@ UPROGS=\
 	_shutdown\
 	_touch\
 	_extenttest\
-
+	_mkextent\
+	_getext\
+	_extentdemo\
+	
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
 

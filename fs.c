@@ -558,10 +558,7 @@ if(ip->type == T_EXTENT){
   }
   return n;
 }
-
-// PAGEBREAK!
-// Write data to inode.
-// Caller must hold ip->lock.
+// Fixed writei function - replace your current writei with this
 int
 writei(struct inode *ip, char *src, uint off, uint n)
 {
@@ -579,50 +576,132 @@ writei(struct inode *ip, char *src, uint off, uint n)
   if(off + n > MAXFILE*BSIZE)
     return -1;
     
-    if(ip->type == T_EXTENT){
+  if(ip->type == T_EXTENT){
     tot = 0;
-    
-      while(tot < n){
-        uint file_blockno = off/BSIZE; //block number in the file.
-        int found = 0;
-        
-        for(int i = 0; i < MAX_EXTENTS; i++){
-          uint start = ip->extents[i].start;
-          uint length = ip->extents[i].length;
+    while(tot < n){
+      uint file_blockno = off/BSIZE;
+      int found = 0;
+      uint blocks_before = 0;  // Track blocks in previous extents
+
+      for(int i = 0; i < MAX_EXTENTS; i++){
+        if(ip->extents[i].length == 0) continue;
+
+        // Check if the block we want is in this extent
+        if(file_blockno < blocks_before + ip->extents[i].length){
+          // Calculate which block within this extent
+          uint block_in_extent = file_blockno - blocks_before;
+          uint disk_blockno = ip->extents[i].start + block_in_extent;
           
-          if(file_blockno < length){
-            uint disk_blockno = start + file_blockno;
-            bp = bread(ip->dev, disk_blockno);
-            
-            m = min(n - tot, BSIZE - off%BSIZE);
-            memmove(bp->data + off%BSIZE, src, m); //copy m bytes of memory from src to data + off%BSIZE
-            log_write(bp); //log the write as having occurred
-            brelse(bp);
-            
-            off += m;
-            tot += m;
-            src += m;
-            found = 1;
-            break;
-          } else {
-            file_blockno -= length;
-          }
-          
-        }
-        
-        
-        if(!found){
+          bp = bread(ip->dev, disk_blockno);
+          m = min(n - tot, BSIZE - off%BSIZE);
+          memmove(bp->data + off%BSIZE, src, m);
+          log_write(bp);
+          brelse(bp);
+
+          off += m;
+          tot += m;
+          src += m;
+          found = 1;
           break;
         }
+        // This block is not in this extent, so add this extent's length to blocks_before
+        blocks_before += ip->extents[i].length;
       }
-	  if(off > ip->size){
-	    ip->size = off;
-	  }
-	  iupdate(ip); //update the file size if the current offset is greater than the past size.
-	  
-	  return tot;
+
+      if(!found){
+        // Need to allocate a new block
+        int new_extent_idx = -1;
+        
+        // First check if we can extend the last extent
+        for(int i = 0; i < MAX_EXTENTS; i++){
+          if(ip->extents[i].length > 0){
+            // Check if this is the last extent
+            int is_last = 1;
+            for(int j = i + 1; j < MAX_EXTENTS; j++){
+              if(ip->extents[j].length > 0){
+                is_last = 0;
+                break;
+              }
+            }
+            
+            if(is_last){
+              // Try to extend this extent
+              uint new_block_addr = balloc(ip->dev);
+              if(new_block_addr == 0){
+                // Out of disk space
+                break;
+              }
+              
+              // Check if it's contiguous
+              if(new_block_addr == ip->extents[i].start + ip->extents[i].length){
+                // Extend the extent
+                ip->extents[i].length++;
+                
+                // Write to the new block
+                bp = bread(ip->dev, new_block_addr);
+                m = min(n - tot, BSIZE - off%BSIZE);
+                memmove(bp->data + off%BSIZE, src, m);
+                log_write(bp);
+                brelse(bp);
+                
+                off += m;
+                tot += m;
+                src += m;
+                found = 1;
+                break;
+              } else {
+                // Not contiguous, free it and create new extent
+                bfree(ip->dev, new_block_addr);
+              }
+            }
+          }
+        }
+        
+        if(!found){
+          // Find empty extent slot
+          for(int i = 0; i < MAX_EXTENTS; i++){
+            if(ip->extents[i].length == 0){
+              new_extent_idx = i;
+              break;
+            }
+          }
+          
+          if(new_extent_idx == -1){
+            cprintf("writei: Out of extent descriptors for inode %d (MAX_EXTENTS=%d)\n", ip->inum, MAX_EXTENTS);
+            break;
+          }
+
+          uint new_block_addr = balloc(ip->dev);
+          if(new_block_addr == 0){
+            // Out of disk space
+            break;
+          }
+          
+          ip->extents[new_extent_idx].start = new_block_addr;
+          ip->extents[new_extent_idx].length = 1;
+          
+          // Write to the new block
+          bp = bread(ip->dev, new_block_addr);
+          m = min(n - tot, BSIZE - off%BSIZE);
+          memmove(bp->data + off%BSIZE, src, m);
+          log_write(bp);
+          brelse(bp);
+          
+          off += m;
+          tot += m;
+          src += m;
+        }
+      }
     }
 
+    if(off > ip->size){
+      ip->size = off;
+    }
+    iupdate(ip);
+    return tot;
+  }
+
+  // Original code for non-extent files
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
     bp = bread(ip->dev, bmap(ip, off/BSIZE));
     m = min(n - tot, BSIZE - off%BSIZE);
